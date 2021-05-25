@@ -16,7 +16,7 @@ CFG["masterdata"] = {
     }
 }
 CFG["stratigraphy"] = {"TopVolantis": {}}
-CFG["access"] = {"someaccess": "jail"}
+CFG["access"] = {"someaccess": "jail", "asset": "someasset"}
 CFG["model"] = {"revision": "0.99.0"}
 
 RUN = "tests/data/drogon/ertrun1/realization-0/iter-0/rms"
@@ -28,8 +28,7 @@ logger.setLevel(logging.INFO)
 def test_process_fmu_case():
     """The produce(!) the fmu case data."""
 
-    case = fmu.dataio.InitializeCase()
-    case._config = CFG
+    case = fmu.dataio.InitializeCase(CFG)
     case._pwd = pathlib.Path(RUN)
 
     c_meta = case._establish_fmu_case_metadata(

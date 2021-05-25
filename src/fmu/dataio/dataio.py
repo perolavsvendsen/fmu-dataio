@@ -79,9 +79,9 @@ class ExportData:
 
     def __init__(
         self,
+        config: dict,
         name: Optional[str] = None,
         relation: Optional[dict] = None,
-        config: Optional[dict] = None,
         content: Optional[Union[str, dict]] = None,
         unit: Optional[str] = None,
         tagname: Optional[str] = None,
@@ -97,6 +97,9 @@ class ExportData:
         """Instantate ExportData object.
 
         Args:
+            config: A configuration dictionary. In the standard case this is read
+                from FMU global vaiables (via fmuconfig). The dictionary must contain
+                some predefined main level keys.
             name: The name of the object. If not set it is tried to be inferred from
                 the xtgeo object. The name is then checked towards the stratigraphy
                 list, and name is replaced with official stratigraphic name if found.
@@ -106,9 +109,6 @@ class ExportData:
                 other stratigraphic units. The default is None, but for e.g. seismic
                 attributes this can be important. The input is a dictionary with
                 the following fields: to-be...
-            config: A configuation dictionary. In the standard case this is read
-                from FMU global vaiables (via fmuconfig). The dictionary must contain
-                some predefined main level keys.
             content: Is a string or a dictionary with one key. Example is "depth" or
                 {"fluid_contact": {"xxx": "yyy", "zzz": "uuu"}}
             unit: Is the unit of the exported item(s), e.g. "m" or "fraction".
@@ -198,11 +198,12 @@ class ExportData:
     def _get_meta_access(self) -> None:
         """Get metadata overall (default) from access section in config."""
         # note that access should be possible to change per object
-        if self._config is None or "access" not in self._config.keys():
-            logger.warning("No access section present")
-            self._meta_access = None
-            return
+        if self._config is None:
+            raise ValueError("No config")
+        if "access" not in self._config.keys():
+            raise ValueError("No access section was found in the config.")
 
+        # case objects will have the asset sublevel only
         self._meta_access = self._config["access"]
         logger.info("Metadata for access is set!")
 
@@ -437,14 +438,14 @@ class ExportData:
 class InitializeCase(ExportData):  # pylint: disable=too-few-public-methods
     def __init__(  # pylint: disable=super-init-not-called
         self,
-        config: Optional[dict] = None,
+        config: dict,
         verbosity: Optional[str] = "CRITICAL",
         runfolder: Optional[str] = None,
     ) -> None:
         """Instantate ExportData object.
 
         Args:
-            config: A configuation dictionary. In the standard case this is read
+            config: A configuration dictionary. In the standard case this is read
                 from FMU global vaiables (via fmuconfig). The dictionary must contain
                 some predefined main level keys.
             verbosity: Is logging/message level for this module. Input as
@@ -485,6 +486,7 @@ class InitializeCase(ExportData):  # pylint: disable=too-few-public-methods
         super()._get_meta_tracklog()
         super()._get_meta_fmu()
 
+
     # ==================================================================================
     # Store case data.
 
@@ -513,6 +515,14 @@ class InitializeCase(ExportData):  # pylint: disable=too-few-public-methods
         meta["fmu"] = OrderedDict()
         meta["fmu"]["case"] = c_meta
         meta["fmu"]["model"] = self._meta_fmu["model"]
+
+        # case metadata shall contain the 'access' sublevel only
+        if "asset" not in self._meta_access:
+            logger.error("access.asset was not found in the config. This is required.")
+            logger.debug("self._meta_access was %s", self._meta_access)
+            raise ValueError("access.asset was not found in the config.")
+        meta["access"] = {"asset": self._meta_access["asset"]}
+
         meta["masterdata"] = self._meta_masterdata
         meta["tracklog"] = list()
         track = OrderedDict()
