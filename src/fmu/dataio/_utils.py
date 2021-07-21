@@ -202,7 +202,7 @@ def read_parameters_txt(pfile):
            GLOBVAR:VOLON_PORO_CHANNEL    0.2
       LOG10_GLOBVAR:FAULT_SEAL_SCALING   0.685516
       LOG10_MULTREGT:MULT_THERYS_VOLON   -3.21365
-      LOG10_MULTREGT:MULT_VALYSAR_THERYS -3.2582      
+      LOG10_MULTREGT:MULT_VALYSAR_THERYS -3.2582
 
     ...where leading whitespace is space, separator is tab
 

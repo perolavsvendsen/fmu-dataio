@@ -133,6 +133,7 @@ def test_parse_parameters_txt():
     assert res["GLOBVAR"]["VOLON_PERMH_CHANNEL"] == 1100
     assert res["LOG10_MULTREGT"]["MULT_VALYSAR_THERYS"] == -3.2582
 
+
 def test_parse_parameters_txt_justified():
     """Testing parsing of justified parameters.txt to JSON"""
 
