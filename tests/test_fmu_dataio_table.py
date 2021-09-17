@@ -63,8 +63,9 @@ def test_table_io_arrow(tmp_path):
     table = pa.Table.from_pandas(df)
     fmu.dataio.ExportData.export_root = tmp_path.resolve()
 
-    exp = fmu.dataio.ExportData(name="test", verbosity="INFO", content="smry")
-    exp._pwd = tmp_path
+    exp = fmu.dataio.ExportData(
+        name="test", verbosity="INFO", content="smry", runfolder=tmp_path
+    )
     exp.to_file(table)
 
     assert (tmp_path / "tables" / "test.arrow").is_file() is True
