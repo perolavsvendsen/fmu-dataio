@@ -35,13 +35,13 @@ def test_table_io_pandas(tmp_path):
     """Minimal test tables io, uses tmp_path."""
 
     # make a small DataFrame
-    table = pd.DataFrame({"STOIIP": [123, 345, 654], "PORO": [0.2, 0.4, 0.3]})
+    df = pd.DataFrame({"STOIIP": [123, 345, 654], "PORO": [0.2, 0.4, 0.3]})
     fmu.dataio.ExportData.export_root = tmp_path.resolve()
     fmu.dataio.ExportData.table_fformat = "csv"
 
     exp = fmu.dataio.ExportData(name="test", verbosity="INFO", content="volumes")
     exp._pwd = tmp_path
-    exp.to_file(table)
+    exp.to_file(df)
 
     assert (tmp_path / "tables" / ".test.csv.yml").is_file() is True
     with open(tmp_path / "tables" / "test.csv") as stream:
@@ -49,7 +49,7 @@ def test_table_io_pandas(tmp_path):
     assert len(header) == 2
 
     # export with index=True which will give three columns (first is the index column)
-    exp.to_file(table, index=True)
+    exp.to_file(df, index=True)
     with open(tmp_path / "tables" / "test.csv") as stream:
         header = stream.readline().split(",")
     assert len(header) == 3
@@ -110,9 +110,9 @@ def test_tables_io_larger_case_ertrun(tmp_path):
     )
 
     # make a fake DataFrame
-    table = pd.DataFrame({"STOIIP": [123, 345, 654], "PORO": [0.2, 0.4, 0.3]})
+    df = pd.DataFrame({"STOIIP": [123, 345, 654], "PORO": [0.2, 0.4, 0.3]})
 
-    exp.to_file(table, verbosity="INFO")
+    exp.to_file(df, verbosity="INFO")
 
     metadataout = out / ".sometable--what_descr.csv.yml"
     assert metadataout.is_file() is True
