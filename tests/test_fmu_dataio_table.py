@@ -3,6 +3,7 @@ from collections import OrderedDict
 import logging
 import shutil
 import pandas as pd
+import pyarrow as pa
 import yaml
 
 import fmu.dataio
@@ -30,7 +31,7 @@ RUN = "tests/data/drogon/ertrun1/realization-0/iter-0/rms"
 CASEPATH = "tests/data/drogon/ertrun1"
 
 
-def test_table_io(tmp_path):
+def test_table_io_pandas(tmp_path):
     """Minimal test tables io, uses tmp_path."""
 
     # make a small DataFrame
@@ -52,6 +53,31 @@ def test_table_io(tmp_path):
     with open(tmp_path / "tables" / "test.csv") as stream:
         header = stream.readline().split(",")
     assert len(header) == 3
+
+
+def test_table_io_arrow(tmp_path):
+    """Test the support for PyArrow tables"""
+
+    # make a small pa.Table
+    df = pd.DataFrame({"STOIIP": [123, 345, 654], "PORO": [0.2, 0.4, 0.3]})
+    table = pa.Table.from_pandas(df)
+    fmu.dataio.ExportData.export_root = tmp_path.resolve()
+
+    exp = fmu.dataio.ExportData(name="test", verbosity="INFO", content="smry")
+    exp._pwd = tmp_path
+    exp.to_file(table)
+
+    assert (tmp_path / "tables" / "test.arrow").is_file() is True
+    assert (tmp_path / "tables" / ".test.arrow.yml").is_file() is True
+
+    table_in = pa.feather.read_table(tmp_path / "tables" / "test.arrow")
+    assert table_in.num_columns == 2
+
+    with open(tmp_path / "tables" / ".test.arrow.yml") as stream:
+        metadata = yaml.safe_load(stream)
+        assert metadata["data"]["layout"] == "table"
+        assert metadata["data"]["spec"]["size"] == 6
+        assert metadata["data"]["spec"]["columns"] == ["STOIIP", "PORO"]
 
 
 def test_tables_io_larger_case_ertrun(tmp_path):
@@ -89,4 +115,11 @@ def test_tables_io_larger_case_ertrun(tmp_path):
     exp.to_file(table, verbosity="INFO")
 
     metadataout = out / ".sometable--what_descr.csv.yml"
+    assert metadataout.is_file() is True
+
+    # then try pyarrow
+    table = pa.Table.from_pandas(df)
+    exp.to_file(table, verbosity="INFO")
+
+    metadataout = out / ".sometable--what_descr.arrow.yml"
     assert metadataout.is_file() is True
