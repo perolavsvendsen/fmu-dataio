@@ -64,7 +64,7 @@ def test_table_io_arrow(tmp_path):
     fmu.dataio.ExportData.export_root = tmp_path.resolve()
 
     exp = fmu.dataio.ExportData(
-        name="test", verbosity="INFO", content="smry", runfolder=tmp_path
+        name="test", verbosity="INFO", content="timeseries", runfolder=tmp_path
     )
     exp.to_file(table)
 

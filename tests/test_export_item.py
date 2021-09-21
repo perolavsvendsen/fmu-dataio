@@ -302,7 +302,22 @@ def test_data_process_content_fluid_contact():
         exportitem._data_process_content()
     assert "is not valid for" in str(errmsg)
 
-    # test case 3
+def test_data_process_content_field_outline():
+    """Test the field field_outline."""
+
+    # test case 1
+    dataio = fmu.dataio.ExportData(
+        name="Valysar",
+        config=CFG2,
+        content={"field_outline": {"contact": "owc"}},
+        timedata=[["20210101", "first"], [20210902, "second"]],
+        tagname="WhatEver",
+    )
+    obj = xtgeo.Polygons()
+    exportitem = ei._ExportItem(dataio, obj, verbosity="INFO")
+    exportitem._data_process_content()
+
+    # test case 2
     dataio = fmu.dataio.ExportData(
         name="Valysar",
         config=CFG2,
@@ -311,7 +326,24 @@ def test_data_process_content_fluid_contact():
         tagname="WhatEver",
     )
     obj = xtgeo.Polygons()
+    with pytest.raises(ei.ValidationError) as errmsg:
+        exportitem = ei._ExportItem(dataio, obj, verbosity="INFO")
+        exportitem._data_process_content()
+    assert "is not valid for" in str(errmsg)
 
+    # test case 3
+    dataio = fmu.dataio.ExportData(
+        name="Valysar",
+        config=CFG2,
+        content="field_outline",
+        timedata=[["20210101", "first"], [20210902, "second"]],
+        tagname="WhatEver",
+    )
+    obj = xtgeo.Polygons()
+    with pytest.raises(ei.ValidationError) as errmsg:
+        exportitem = ei._ExportItem(dataio, obj, verbosity="INFO")
+        exportitem._data_process_content()
+    assert "requires additional input" in str(errmsg)
 
 def test_display():
     """
