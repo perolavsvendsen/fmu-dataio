@@ -1,14 +1,12 @@
 """Test the surface_io module."""
+from collections import OrderedDict
 import logging
 import shutil
 import pandas as pd
 import pyarrow as pa
 import yaml
-from collections import OrderedDict
 
 import fmu.dataio
-import pandas as pd
-import yaml
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -41,13 +39,9 @@ def test_table_io_pandas(tmp_path):
     fmu.dataio.ExportData.export_root = tmp_path.resolve()
     fmu.dataio.ExportData.table_fformat = "csv"
 
-    exp = fmu.dataio.ExportData(
-        name="test",
-        verbosity="INFO",
-        content="volumes",
-        runfolder=tmp_path,
-    )
-    exp.to_file(table)
+    exp = fmu.dataio.ExportData(name="test", verbosity="INFO", content="volumes")
+    exp._pwd = tmp_path
+    exp.to_file(df)
 
     assert (tmp_path / "tables" / ".test.csv.yml").is_file() is True
     with open(tmp_path / "tables" / "test.csv") as stream:

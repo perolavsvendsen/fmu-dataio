@@ -98,8 +98,8 @@ class ExportData:
         grid_model: Optional[dict] = None,
         access_ssdl: Optional[dict] = None,
         display_name: Optional[str] = None,
+        runfolder: Optional[str] = None,
         verbosity: Optional[str] = "CRITICAL",
-        **kwargs,  # developer options
     ) -> None:
         """Instantate ExportData object.
 
@@ -135,13 +135,10 @@ class ExportData:
                 settings read from the config. Example:
                 ``{"access_level": "restricted", "rep_include": False}``
             display_name: Set name for clients to use when visualizing.
+            runfolder: Set toplevel of runfolder, where default is current directory
             verbosity: Is logging/message level for this module. Input as
                 in standard python logging; e.g. "WARNING", "INFO".
-            **kwargs: For special developer settings
         """
-        # kwargs:
-        #    runfolder: Override _pwd (process working directory)
-        #    dryrun: Set instance variables but do not run functions (for unit testing)
 
         self._name = name
         self._context = context
@@ -171,9 +168,9 @@ class ExportData:
 
         logger.setLevel(level=self._verbosity)
         self._pwd = pathlib.Path().absolute()
-
-        if kwargs.get("runfolder", None) is not None:
-            self._pwd = pathlib.Path(kwargs["runfolder"]).absolute()
+        logger.info("Create instance of ExportData")
+        if runfolder:
+            self._pwd = pathlib.Path(runfolder).absolute()
 
         # define chunks of metadata for primary first order categories
         # (except class which is set directly later)
@@ -187,10 +184,6 @@ class ExportData:
         self._meta_masterdata = OrderedDict()  # masterdata:
         self._meta_fmu = OrderedDict()  # fmu:
 
-        if kwargs.get("dryrun", False):  # developer option, for tests
-            logger.info("Dry run mode is active for __init__")
-            return
-
         # strat metadata are used as componenents in some of the other meta keys
         self._get_meta_strat()
 
@@ -200,8 +193,6 @@ class ExportData:
         self._get_meta_access()
         self._get_meta_tracklog()
         self._get_meta_fmu()
-
-        logger.info("Create instance of ExportData")
 
     # ==================================================================================
     # Private metadata methods which retrieve metadata that are not closely linked to
@@ -338,10 +329,10 @@ class ExportData:
         return meta
 
     def _process_meta_fmu_realization_iteration(self):
-        """Detect if this is a ERT run and in case provide real, iter, case info.
+        """Detect if this is a realization run.
 
         To detect if a realization run:
-        * See if parameters.txt json at iter level
+        * See of parameters.txt json at iter level
         * find iter name and realization number from folder names
 
         e.g.
@@ -356,8 +347,8 @@ class ExportData:
         logger.info("Process metadata for realization and iteration")
         is_fmurun = False
 
-        folders = self._get_folderlist()
-
+        folders = self._pwd
+        logger.info("Folder to evaluate: %s", self._pwd)
         therealization = None
         ertjob = OrderedDict()
 
@@ -365,34 +356,32 @@ class ExportData:
         casefolder = None
         userfolder = None
 
-        for num, folder in enumerate(folders):
-            if folder and re.match("^realization-.", folder):
+        for num in range(len(folders.parents)):
+            foldername = folders.parents[num].name
+            if re.match("^realization-.", foldername):
                 is_fmurun = True
-                realfolder = folders[num]
-                iterfolder = folders[num + 1]
-                casefolder = folders[num - 1]
-                userfolder = folders[num - 2]
+                realfolder = pathlib.Path(self._pwd).resolve().parents[num]
+                iterfolder = pathlib.Path(self._pwd).resolve().parents[num - 1]
+                casefolder = pathlib.Path(self._pwd).resolve().parents[num + 1]
+                userfolder = pathlib.Path(self._pwd).resolve().parents[num + 2]
 
-                casepath = pathlib.Path("/".join(folders[0:num]))
+                logger.info("Realization folder is %s", realfolder.name)
+                logger.info("Iter folder is %s", iterfolder.name)
+                logger.info("Case folder is %s", casefolder.name)
+                logger.info("User folder is %s", userfolder.name)
 
-                logger.info("Realization folder is %s", realfolder)
-                logger.info("Iter folder is %s", iterfolder)
-                logger.info("Case folder is %s", casefolder)
-                logger.info("User folder is %s", userfolder)
-                logger.info("Root path for case is %s", casepath.resolve())
+                self._iterfolder = iterfolder.name
+                self._realfolder = realfolder.name
 
-                self._iterfolder = pathlib.Path(casepath / realfolder / iterfolder)
-                self._realfolder = pathlib.Path(casepath / realfolder)
-
-                therealization = realfolder.replace("realization-", "")
+                therealization = realfolder.name.replace("realization-", "")
 
                 # store parameters.txt and jobs.json
-                parameters_file = self._iterfolder / "parameters.txt"
+                parameters_file = iterfolder / "parameters.txt"
                 if parameters_file.is_file():
                     params = _utils.read_parameters_txt(parameters_file)
                     ertjob["params"] = params
 
-                jobs_file = self._iterfolder / "jobs.json"
+                jobs_file = iterfolder / "jobs.json"
                 if jobs_file.is_file():
                     with open(jobs_file, "r") as stream:
                         ertjob["jobs"] = json.load(stream)
@@ -404,8 +393,7 @@ class ExportData:
 
         # ------------------------------------------------------------------------------
         # get the case metadata which shall be established already
-        casemetaroot = casepath / "share" / "metadata" / "fmu_case"
-
+        casemetaroot = casefolder / "share" / "metadata" / "fmu_case"
         # may be json or yml
         casemetafile = None
         for ext in (".json", ".yml"):
@@ -426,18 +414,18 @@ class ExportData:
         # get the iteration metadata
         runid = ertjob["jobs"]["run_id"].replace(":", "_")
         i_meta = OrderedDict()
-        i_meta["uuid"] = _utils.uuid_from_string(c_meta["uuid"] + iterfolder)
+        i_meta["uuid"] = _utils.uuid_from_string(c_meta["uuid"] + iterfolder.name)
         i_meta["id"] = 0
-        if "iter-" in iterfolder:
-            i_meta["id"] = int(iterfolder.replace("iter-", ""))
-        i_meta["name"] = iterfolder
+        if "iter-" in iterfolder.name:
+            i_meta["id"] = int(iterfolder.name.replace("iter-", ""))
+        i_meta["name"] = iterfolder.name
         i_meta["runid"] = runid
 
         # ------------------------------------------------------------------------------
         # get the realization metadata
         r_meta = OrderedDict()
         r_meta["id"] = int(therealization)
-        r_meta["name"] = realfolder
+        r_meta["name"] = realfolder.name
         r_meta["uuid"] = _utils.uuid_from_string(
             c_meta["uuid"] + str(i_meta["id"]) + str(r_meta["id"])
         )
@@ -450,20 +438,6 @@ class ExportData:
         logger.debug("Realiz. meta: \n%s", json.dumps(r_meta, indent=2, default=str))
 
         return c_meta, i_meta, r_meta
-
-    def _get_folderlist(self) -> list:
-        """Return a list of pure folder names including current up to system root.
-
-        For example: current is /scratch/xfield/nn/case/realization-33/iter-1
-        shall return ['', 'scratch', 'xfield', 'nn', 'case', 'realization-33', 'iter-1']
-        """
-        current = self._pwd
-        flist = [current.name]
-        for par in current.parents:
-            flist.append(par.name)
-
-        flist.reverse()
-        return flist
 
     def _get_meta_strat(self) -> None:
         """Get metadata from the stratigraphy block in config; used indirectly."""
@@ -530,7 +504,7 @@ class InitializeCase(ExportData):  # pylint: disable=too-few-public-methods
         self,
         config: Optional[dict] = None,
         verbosity: Optional[str] = "CRITICAL",
-        **kwargs,
+        runfolder: Optional[str] = None,
     ) -> None:
         """Instantate ExportData object.
 
@@ -551,8 +525,8 @@ class InitializeCase(ExportData):  # pylint: disable=too-few-public-methods
         self._pwd = pathlib.Path().absolute()
         logger.info("Create instance of InitializeCase")
 
-        if kwargs.get("runfolder", None) is not None:
-            self._pwd = pathlib.Path(kwargs["runfolder"]).absolute()
+        if runfolder:
+            self._pwd = pathlib.Path(runfolder).absolute()
 
         # define chunks of metadata for primary first order categories
         # (except class which is set directly later)
@@ -565,9 +539,6 @@ class InitializeCase(ExportData):  # pylint: disable=too-few-public-methods
         self._meta_access = OrderedDict()  # access:
         self._meta_masterdata = OrderedDict()  # masterdata:
         self._meta_fmu = OrderedDict()  # fmu:
-
-        if kwargs.get("dryrun", False):
-            return
 
         # strat metadata are used as componenents in some of the other meta keys
         super()._get_meta_strat()

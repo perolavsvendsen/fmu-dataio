@@ -1,20 +1,18 @@
 # fmu-dataio
-
 Utility functions for data transfer of FMU data with rich metadata, for REP,
 SUMO, WEBVIZ, etc.
 
-These fmu.dataio functions can be ran both inside RMS and outside RMS with
-exactly the same syntax.
+These fmu.dataio can be ran both inside RMS and outside RMS with exactly same syntax.
 
 For surfaces, grids, wells, polygons, the input object must be parsed by
-xtgeo. Tables must be represented as a pandas dataframe.
+xtgeo. Tables must be reperesented as a pandas dataframe.
 
 A configuration input is required and will within Equinor be read from the
-so-called `global_variables.yml` produced by fmu-config. Details on syntax
+so-called global_variables.yml produced by fmu-config. Details on syntax
 will be given in the documentation.
 
 As default, output with metadata will be stored in `../../share/results` for each
-realization, while ensemble metadata when run with ERT will be stored in
+realization, while ensemble metadata when ran with ERT will be stored in
 `/scratch/<field>/<user>/<case>/share/metadata`
 
 ## Usage
@@ -23,21 +21,21 @@ realization, while ensemble metadata when run with ERT will be stored in
 
 This is typically done via a hook workflow in ERT. This will make it possible to
 register a case for the Sumo uploader. As default, this will give a case metadata
-file stored in `/scratch/somefield/someuser/somecase/share/metadata/fmu_case.yml`.
+file stored in `/scratch/somefield/someuser/somecase/share/metadata/fmu_case.yml
 
 
-```python
+```
 from fmu.config import utilities as ut
 from fmu.dataio import InitializeCase
 
 CFG = ut.yaml_load("../../fmuconfig/output/global_variables.yml")
 
-CDIR = "/scratch/somefield"
+CDIR = "/scrach/somefield"
 CNAME = "somecase"
 CUSER = "someuser"
 DSC = "The ultimate history match"
 
-def initalize():
+def initilize():
 
     mycase = InitializeCase(config=CFG)
 
@@ -47,7 +45,7 @@ def initalize():
 
 ### Export a surface
 
-```python
+```
 import xtgeo
 from fmu.config import utilities as ut
 from fmu.dataio import ExportData
@@ -82,7 +80,7 @@ if __name__ == "__main__":
 
 This is coming functionality and code in example is tentative!
 
-```python
+```
 import pandas as pd
 from fmu.config import utilities as ut
 from fmu.dataio import ExportData
@@ -112,19 +110,18 @@ if __name__ == "__main__":
 
 ## Installation
 
-Install a specific version (e.g. 0.1.1) directly from github through
+Install a spesific version (e.g. 0.1.1) directly from github through
 
-```console
+```
 pip install git+ssh://git@github.com/equinor/fmu-dataio@0.1.1
 ```
 
 Local development and testing:
 
-```console
+```
 pip install -e .[tests,docs]
 pytest
 ```
 
 ## License
-
 Apache 2.0
